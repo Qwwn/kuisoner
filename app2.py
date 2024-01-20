@@ -49,9 +49,9 @@ def create_pie_chart_per_pertanyaan(data, mata_kuliah):
             sizes = [1] * len(sizes)  # Set all sizes to 1 if they are all zero
 
         try:
-            wrapped_title = "\n".join(wrap(f"{idx}. {pertanyaan}", 55))
+            wrapped_title = "\n".join(wrap(f"{idx}. {pertanyaan}", 58))
             title_with_newline = wrapped_title + '\n'  # Add a newline after the title
-            ax.set_title(title_with_newline, fontsize=16, fontweight='bold')
+            ax.set_title(title_with_newline, fontsize=15, fontweight='bold')
 
             wedges, texts, autotexts = ax.pie(sizes, explode=explode, labels=labels, colors=colors,
                                               autopct=lambda p: '{:.0f} ({:.1f}%)'.format(p * sum(sizes) / 100, p),
@@ -103,7 +103,7 @@ def main():
 
     # Read data CSV
     current_directory = os.path.dirname(os.path.abspath(__file__))
-    path_data = os.path.join(current_directory, 'KL_Kuesioner_202312_MochammadFathurridhoHermantoSTMT (1).csv')
+    path_data = os.path.join(current_directory, 'KL_Kuesioner_202312_MochammadFathurridhoHermantoSTMT (2).csv')
     
     # Extract lecturer's name from file name
     lecturer_name_match = re.search(r'_([A-Za-z]+)STMT', path_data)
@@ -186,7 +186,7 @@ def main():
 
         # Set line spacing and space after
     # Save the Word document
-    document.save(f"KL_Kuesioner_202312_{lecturer_name}_STMT (1).docx")
+    document.save(f"KL_Kuesioner_202312_{lecturer_name}_STMT (2).docx")
 
 if __name__ == '__main__':
     main()
