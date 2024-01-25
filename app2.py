@@ -1,12 +1,11 @@
 import os
 import re
 import pandas as pd
-import streamlit as st
 import matplotlib.pyplot as plt
 from docx import Document
-from docx.shared import Inches  # Add this line
+from docx.shared import Inches
 from io import BytesIO
-from docx.shared import Pt, Pt
+from docx.shared import Pt
 from textwrap import wrap
 
 # Function to process data and create tables
@@ -91,28 +90,19 @@ def save_figures_to_word(figures, document):
             plt.close(figures[fig_idx])
             cell.paragraphs[0].add_run().add_picture(image_stream, width=Inches(3), height=Inches(2.5))
 
-## ...
 def format_lecturer_name(name):
     # Use regular expression to insert spaces before capital letters
     formatted_name = re.sub(r"([A-Z])", r" \1", name).strip()
     return formatted_name
 
-# Main Streamlit app
-def main():
-    st.title("Streamlit App for Data Visualization")
-
-    # Read data CSV
-    current_directory = os.path.dirname(os.path.abspath(__file__))
-    path_data = os.path.join(current_directory, 'KL_Kuesioner_202312_MochammadFathurridhoHermantoSTMT (2).csv')
-    
+# Main function for generating Word document
+def generate_word_document(data, path_data):
     # Extract lecturer's name from file name
     lecturer_name_match = re.search(r'_([A-Za-z]+)STMT', path_data)
     lecturer_name = lecturer_name_match.group(1) if lecturer_name_match else "Unknown"
 
     # Format lecturer's name with spaces
     formatted_lecturer_name = format_lecturer_name(lecturer_name)
-
-    data = pd.read_csv(path_data)
 
     # Process data
     tabel_per_matakuliah = process_data(data)
@@ -132,7 +122,7 @@ def main():
 
         document.add_heading(f"{mata_kuliah}", level=1,)
 
-         # Add lecturer name and number of respondents in a single paragraph
+        # Add lecturer name and number of respondents in a single paragraph
         lecturer_and_respondents_paragraph = document.add_paragraph()
 
         # Add lecturer name on the left
@@ -145,18 +135,18 @@ def main():
         lecturer_and_respondents_paragraph.add_run(f"Jumlah Responden: ").font.size = Pt(12)
 
         # Add table to Word document
-        table = document.add_table(rows=tabel.shape[0] + 1, cols=tabel.shape[1] + 1)
-        table.style = 'Table Grid'
-
+        table = document.add_table(rows=tabel.shape[0] + 1, cols=tabel.shape[1] + 2)  # Add 2 columns for 'Nilai'
 
         # Adjust column widths
         for col_num, column in enumerate(table.columns):
             if col_num == 0:
-                table.cell(0, col_num).width = Inches(20)  # Adjust the width for Pertanyaan column
+                table.cell(0, col_num).width = Inches(10)  # Adjust the width for Pertanyaan column
+            elif col_num == len(table.columns) - 1 or col_num == len(table.columns):  # Set the width for 'Nilai' columns
+                table.cell(0, col_num).width = Inches(0.5)
             else:
                 table.cell(0, col_num).width = Inches(0.5)  # Adjust the width for other columns
 
-        # Add column headers (Pertanyaan and values)
+        # Add column headers (Pertanyaan, values, and 'Nilai')
         table.cell(0, 0).text = 'Pertanyaan'
         table.cell(0, 0).paragraphs[0].runs[0].font.size = Pt(12)
         table.cell(0, 0).paragraphs[0].runs[0].font.bold = True
@@ -166,15 +156,31 @@ def main():
             cell.paragraphs[0].runs[0].font.bold = True  # Make the header bold
             cell.paragraphs[0].runs[0].font.size = Pt(12)  # Adjust the font size for the header
 
-     
+        # Add 'Nilai' column header
+        table.cell(0, len(table.columns) - 1).text = 'Nilai'
+        table.cell(0, len(table.columns) - 1).paragraphs[0].runs[0].font.size = Pt(12)
+        table.cell(0, len(table.columns) - 1).paragraphs[0].runs[0].font.bold = True
+
         for row_num, (pertanyaan, values) in enumerate(tabel.iterrows(), start=1):
             table.cell(row_num, 0).text = f"{row_num}. {pertanyaan}"  # Set the combined "No" and "Pertanyaan" column
             table.cell(row_num, 0).paragraphs[0].runs[0].font.size = Pt(12)  # Set the font size for the combined column
             for col_num, value in enumerate(values, start=1):
                 cell = table.cell(row_num, col_num)
-                cell.text = "{:.2f}".format(value)  # Format the float with two digits after the decimal point
+
+                if col_num != len(table.columns):  # Exclude the 'Nilai' column
+                    # Add a percentage sign to each value
+                    cell.text = "{:.2f}%".format(value)
+                else:
+                    # Divide the 'Nilai' column values by 100 and add a percentage sign
+                    cell.text = "{:.2f}%".format(value / 100)
+
                 cell.paragraphs[0].runs[0].font.size = Pt(12)
 
+            # Calculate the 'Nilai' column value based on the provided formula for each row
+            nilai_value = values['Sangat Setuju'] * 4 + values['Setuju'] * 3 + values['Tidak Setuju'] * 2 + values['Sangat Tidak Setuju'] * 1
+            # Set the 'Nilai' column value for each row
+            table.cell(row_num, len(table.columns) - 1).text = "{:.2f}".format(nilai_value/100)
+            table.cell(row_num, len(table.columns) - 1).paragraphs[0].runs[0].font.size = Pt(12)
 
         # Add heading for pie charts
         document.add_page_break()
@@ -184,9 +190,15 @@ def main():
         # Save figures to Word document
         save_figures_to_word(figures, document)
 
-        # Set line spacing and space after
+    # Set line spacing and space after
     # Save the Word document
     document.save(f"KL_Kuesioner_202312_{lecturer_name}_STMT (2).docx")
 
 if __name__ == '__main__':
-    main()
+    # Read data CSV
+    current_directory = os.path.dirname(os.path.abspath(__file__))
+    path_data = os.path.join(current_directory, 'KL_Kuesioner_202312_MochammadFathurridhoHermantoSTMT (2).csv')
+    data = pd.read_csv(path_data)
+
+    # Generate Word document
+    generate_word_document(data, path_data)
